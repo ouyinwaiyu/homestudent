@@ -1,2 +1,5 @@
 streamlit
 requests
+reportlab
+PyPDF2
+pillow
