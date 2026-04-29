@@ -4,6 +4,7 @@ import json
 import os
 import base64
 from io import BytesIO
+from datetime import datetime, timedelta
 
 # ===================== 豆包API配置 =====================
 DOUBAO_API_KEY = "ark-8c8dd5e0-2b7f-41c2-bf6b-ce7465dde911-75bd0"
@@ -34,12 +35,18 @@ def save_users(users):
 
 # 初始化用户数据
 users = load_users()
-# 兼容旧数据，给老用户加上班级字段
+# 兼容旧数据
 for uname, u in users.items():
     if "class_name" not in u:
         users[uname]["class_name"] = "默认班级"
     if "pending_reviews" not in u:
         users[uname]["pending_reviews"] = []
+    # 给旧错题加上时间戳和图片字段
+    for q in users[uname].get("wrong_questions", []):
+        if "timestamp" not in q:
+            q["timestamp"] = (datetime.now() - timedelta(days=7)).isoformat()
+        if "img_base64" not in q:
+            q["img_base64"] = None
 save_users(users)
 
 # ===================== 登录状态 =====================
@@ -61,10 +68,11 @@ def ai_correct_image(img_base64):
     prompt = """
 你是作业批改老师，现在我给你发了学生的作业照片，你要：
 1. 识别图片里的题目和学生的答案
-2. 判断对错
-3. 只给思路提示，绝对不给答案
-4. 语言简洁，适合学生自主订正
-5. 如果有多个题目，逐个说明
+2. 判断对错，只保留错误的题的分析
+3. 如果全部正确，直接返回"##全部正确"
+4. 错误的题，只给思路提示，绝对不给答案
+5. 语言简洁，适合学生自主订正
+6. 不要说多余的话，不要说"我已明确批改要求"这类话
 """
     try:
         resp = requests.post(
@@ -87,9 +95,21 @@ def ai_correct_image(img_base64):
             }
         )
         result = resp.json()["choices"][0]["message"]["content"]
+        # 过滤掉多余的文字
+        result = result.replace("我已明确批改要求，请你提供需要批改的题目和你的作答内容", "").strip()
         return result, None
     except Exception as e:
         return None, str(e)
+
+# 检查错题是否可以删除（满6天）
+def can_delete(timestamp_str):
+    if not timestamp_str:
+        return True
+    try:
+        q_time = datetime.fromisoformat(timestamp_str)
+        return datetime.now() - q_time >= timedelta(days=6)
+    except:
+        return True
 
 # ===================== 注册页面 =====================
 def register_page():
@@ -194,11 +214,11 @@ st.divider()
 # ===================== 学生端 =====================
 if user["role"] == "学生":
     st.header("👨‍🎓 学生中心")
-    menu = st.selectbox("菜单", ["上传我的作业", "我的错题本", "错题重做"])
+    menu = st.selectbox("菜单", ["上传我的作业", "错题解析", "错题本"])
 
     if menu == "上传我的作业":
         st.subheader("📷 拍照上传我的作业")
-        st.write("上传后会自动AI初批，然后交给老师审定~")
+        st.write("上传后自动AI批改，正确的题直接通过，错误的题交给老师审定~")
         img = st.file_uploader("上传作业照片（手机可以直接拍照哦）", type=["jpg","png","jpeg"])
 
         if img:
@@ -210,38 +230,61 @@ if user["role"] == "学生":
                 if err:
                     st.error(f"批改出错了：{err}")
                 else:
-                    st.subheader("✅ AI初批结果")
-                    st.success(result)
-                    # 加入待审核
-                    users[username]["pending_reviews"].append({
-                        "题目": "作业题",
-                        "学生答案": "学生提交的作业",
-                        "ai提示": result,
-                        "teacher_hint": result
-                    })
-                    save_users(users)
-                    st.info("已提交给老师审核啦！老师审定后，错题就会存入你的错题本了！")
+                    if result == "##全部正确":
+                        st.success("🎉 太棒了！这次作业全对！没有错题！")
+                    else:
+                        st.subheader("✅ AI初批结果")
+                        st.success(result)
+                        # 只有错误的才加入待审核
+                        users[username]["pending_reviews"].append({
+                            "题目": "作业题",
+                            "学生答案": "学生提交的作业",
+                            "ai提示": result,
+                            "teacher_hint": result,
+                            "img_base64": img_b64
+                        })
+                        save_users(users)
+                        st.info("错题已提交给老师审核啦！老师审定后，就会存入你的错题本了！")
 
-    if menu == "我的错题本":
-        st.subheader("📕 我的错题")
-        wrong = user["wrong_questions"]
+    if menu == "错题解析":
+        st.subheader("📝 错题解析")
+        # 按时间倒序排序
+        wrong = sorted(user["wrong_questions"], key=lambda x: x.get("timestamp", ""), reverse=True)
         if not wrong:
             st.success("暂无错题！太棒了！")
         else:
             for i, q in enumerate(wrong):
+                st.write(f"📅 {datetime.fromisoformat(q['timestamp']).strftime('%Y-%m-%d')}")
                 st.write(f"{i+1}. {q['题目']}")
-                st.info(f"提示：{q['提示']}")
-                if "错因分析" in q:
+                st.info(f"解析提示：{q['提示']}")
+                if "错因分析" in q and q["错因分析"]:
                     st.write(f"错因：{q['错因分析']}")
+                
+                # 满6天可以删除
+                if can_delete(q.get("timestamp")):
+                    if st.button("删除这条错题", key=f"del_ana_{i}"):
+                        del users[username]["wrong_questions"][i]
+                        save_users(users)
+                        st.success("已删除！")
+                        st.rerun()
+                else:
+                    st.caption("6天后可删除这条错题")
+                st.divider()
 
-    if menu == "错题重做":
-        st.subheader("🔁 错题重做")
-        wrong = user["wrong_questions"]
+    if menu == "错题本":
+        st.subheader("📕 错题本（原题）")
+        # 按时间倒序排序
+        wrong = sorted(user["wrong_questions"], key=lambda x: x.get("timestamp", ""), reverse=True)
         if not wrong:
-            st.success("全部掌握！")
+            st.success("全部掌握！没有错题啦！")
         else:
             q = wrong[0]
+            st.write(f"📅 错题时间：{datetime.fromisoformat(q['timestamp']).strftime('%Y-%m-%d')}")
             st.write(f"题目：{q['题目']}")
+            # 显示原图
+            if q.get("img_base64"):
+                st.image(q["img_base64"], width=400, caption="原题照片")
+            
             ans = st.text_input("请作答")
             if st.button("提交"):
                 if ans != q["学生答案"]:
@@ -266,7 +309,6 @@ else:
     # ====== 老师帮学生上传作业 ======
     if menu == "帮学生上传作业":
         st.subheader("📷 帮学生上传作业 → 自动AI初批")
-        # 列出当前班级的学生
         if not class_students:
             st.warning("还没有学生加入这个班级哦，让学生注册的时候填一样的班级名就行！")
         else:
@@ -282,17 +324,21 @@ else:
                     if err:
                         st.error(f"批改出错了：{err}")
                     else:
-                        st.subheader("✅ AI初批结果")
-                        st.success(result)
-                        # 加入待审核
-                        users[student]["pending_reviews"].append({
-                            "题目": "作业题",
-                            "学生答案": "错误答案",
-                            "ai提示": result,
-                            "teacher_hint": result
-                        })
-                        save_users(users)
-                        st.info(f"已存入【{class_students[student]['name']}】的待审核列表！你可以去'待审核批改'页面审定了！")
+                        if result == "##全部正确":
+                            st.success(f"🎉 {class_students[student]['name']}这次作业全对！没有错题！")
+                        else:
+                            st.subheader("✅ AI初批结果")
+                            st.success(result)
+                            # 只有错误的才加入待审核
+                            users[student]["pending_reviews"].append({
+                                "题目": "作业题",
+                                "学生答案": "错误答案",
+                                "ai提示": result,
+                                "teacher_hint": result,
+                                "img_base64": img_b64
+                            })
+                            save_users(users)
+                            st.info(f"已存入【{class_students[student]['name']}】的待审核列表！你可以直接在下面修改评改内容！")
 
     # ====== 待审核批改 ======
     elif menu == "待审核批改":
@@ -307,24 +353,28 @@ else:
                 with st.expander(f"{s_user['name']} 的待审核作业"):
                     for i, q in enumerate(pending):
                         st.write(f"题目：{q['题目']}")
-                        st.write(f"AI初批提示：{q['ai提示']}")
+                        # 显示原图
+                        if q.get("img_base64"):
+                            st.image(q["img_base64"], width=400, caption="作业原图")
                         
-                        # 老师可以修改提示
-                        new_hint = st.text_area(f"你可以修改/补充提示", value=q["teacher_hint"], key=f"hint_{s}_{i}")
+                        # 老师可以直接修改文字
+                        new_hint = st.text_area(f"直接修改评改内容", value=q["teacher_hint"], key=f"hint_{s}_{i}")
                         cause = st.text_input("错因分析（可选）", key=f"cause_{s}_{i}")
                         
                         if st.button("审核通过，存入错题本", key=f"pass_{s}_{i}"):
-                            # 移到错题本
+                            # 移到错题本，加上时间戳和图片
                             users[s]["wrong_questions"].append({
                                 "题目": q["题目"],
                                 "学生答案": q["学生答案"],
                                 "提示": new_hint,
-                                "错因分析": cause
+                                "错因分析": cause,
+                                "timestamp": datetime.now().isoformat(),
+                                "img_base64": q.get("img_base64")
                             })
                             # 从待审核里删掉
                             del users[s]["pending_reviews"][i]
                             save_users(users)
-                            st.success("审核完成！已存入学生错题本，学生现在可以看到了！")
+                            st.success("审核完成！已存入学生的错题本，学生现在可以看到了！")
                             st.rerun()
         
         if not has_pending:
@@ -345,14 +395,26 @@ else:
             st.info("还没有学生加入这个班级哦")
         else:
             for s in class_students.keys():
-                with st.expander(f"{users[s]['name']} 的错题本"):
-                    wrong = users[s]["wrong_questions"]
+                with st.expander(f"{users[s]['name']} 的错题"):
+                    # 按时间排序
+                    wrong = sorted(users[s]["wrong_questions"], key=lambda x: x.get("timestamp", ""), reverse=True)
                     if not wrong:
                         st.write("暂无错题")
                     else:
-                        for q in wrong:
-                            st.write(f"- {q['题目']} | 提示：{q['提示']}")
+                        for i, q in enumerate(wrong):
+                            st.write(f"📅 {datetime.fromisoformat(q['timestamp']).strftime('%Y-%m-%d')}")
+                            st.write(f"- {q['题目']} | 解析：{q['提示']}")
                             if "错因分析" in q and q["错因分析"]:
                                 st.write(f"  错因：{q['错因分析']}")
+                            # 老师可以删除满6天的错题
+                            if can_delete(q.get("timestamp")):
+                                if st.button("删除这条错题", key=f"del_teacher_{s}_{i}"):
+                                    del users[s]["wrong_questions"][i]
+                                    save_users(users)
+                                    st.success("已删除！")
+                                    st.rerun()
+                            else:
+                                st.caption("6天后可删除")
+                            st.divider()
 
-st.caption("✅ 班级隔离｜多老师支持｜学生自助上传｜AI自动批改｜老师审核｜打印功能｜错题归档")
+st.caption("✅ 班级隔离｜多老师支持｜学生自助上传｜AI自动批改｜老师直接改评改｜错题原图保留｜6天可删除")
