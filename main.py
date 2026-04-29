@@ -20,9 +20,9 @@ def load_users():
             return json.load(f)
     # 默认用户
     return {
-        "teacher": {"pwd": "teacher123", "role": "教师", "name": "王老师", "wrong_questions": []},
-        "student1": {"pwd": "123456", "role": "学生", "name": "张三", "wrong_questions": []},
-        "student2": {"pwd": "123456", "role": "学生", "name": "李四", "wrong_questions": []}
+        "teacher": {"pwd": "teacher123", "role": "教师", "name": "王老师", "wrong_questions": [], "pending_reviews": []},
+        "student1": {"pwd": "123456", "role": "学生", "name": "张三", "wrong_questions": [], "pending_reviews": []},
+        "student2": {"pwd": "123456", "role": "学生", "name": "李四", "wrong_questions": [], "pending_reviews": []}
     }
 
 # 保存用户数据
@@ -32,6 +32,11 @@ def save_users(users):
 
 # 初始化用户数据
 users = load_users()
+# 兼容旧数据，给老用户加上待审核字段
+for uname, u in users.items():
+    if "pending_reviews" not in u:
+        users[uname]["pending_reviews"] = []
+save_users(users)
 
 # ===================== 登录状态 =====================
 if "logged_in" not in st.session_state:
@@ -62,7 +67,8 @@ def register_page():
             "pwd": password,
             "role": role,
             "name": name,
-            "wrong_questions": []
+            "wrong_questions": [],
+            "pending_reviews": []
         }
         save_users(users)
         st.success("注册成功！快去登录吧！")
@@ -107,13 +113,29 @@ username = st.session_state.username
 user = st.session_state.user
 
 # 顶部栏
-col1, col2 = st.columns([4, 1])
+col1, col2, col3 = st.columns([3, 1, 1])
 with col1:
     st.title(f"📚 学习管理系统 - {user['name']}")
 with col2:
+    # 打印按钮
+    st.markdown("""
+    <button onclick="window.print()" style="
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 8px;
+    ">🖨️ 打印当前页面</button>
+    """, unsafe_allow_html=True)
+with col3:
     if st.button("退出登录"):
         st.session_state.logged_in = False
-        st.session_state.user = None
         st.rerun()
 st.divider()
 
@@ -131,6 +153,8 @@ if user["role"] == "学生":
             for i, q in enumerate(wrong):
                 st.write(f"{i+1}. {q['题目']}")
                 st.info(f"提示：{q['提示']}")
+                if "错因分析" in q:
+                    st.write(f"错因：{q['错因分析']}")
 
     if menu == "错题重做":
         st.subheader("🔁 错题重做")
@@ -156,13 +180,14 @@ else:
     st.header("👩‍🏫 教师中心")
     menu = st.selectbox("菜单", [
         "拍照/上传学生作业",
+        "待审核批改",
         "布置作业",
         "学生错题总览"
     ])
 
     # ====== 老师上传学生作业 ======
     if menu == "拍照/上传学生作业":
-        st.subheader("📷 老师上传学生作业 → AI批改")
+        st.subheader("📷 老师上传学生作业 → AI初批")
         # 列出所有学生用户
         student_list = [k for k, v in users.items() if v["role"] == "学生"]
         if not student_list:
@@ -174,8 +199,8 @@ else:
             if img:
                 st.image(img, width=400)
 
-                if st.button("开始AI批改"):
-                    with st.spinner("AI正在批改中..."):
+                if st.button("开始AI初批"):
+                    with st.spinner("AI正在初步批改中..."):
                         prompt = """
 你是作业批改老师，严格遵守：
 1. 只判断对错
@@ -198,20 +223,57 @@ else:
                             result = resp.json()["choices"][0]["message"]["content"]
 
                             # 显示结果
-                            st.subheader("✅ 批改结果")
+                            st.subheader("✅ AI初批结果")
                             st.success(result)
 
-                            # 自动加入学生错题本
-                            if "错误" in result or "❌" in result:
-                                users[student]["wrong_questions"].append({
-                                    "题目": "作业题",
-                                    "学生答案": "错误答案",
-                                    "提示": result
-                                })
-                                save_users(users)
-                                st.warning(f"已存入【{users[student]['name']}】的错题本！")
+                            # 自动加入待审核列表，不是直接进错题本！
+                            users[student]["pending_reviews"].append({
+                                "题目": "作业题",
+                                "学生答案": "错误答案",
+                                "ai提示": result,
+                                "teacher_hint": result
+                            })
+                            save_users(users)
+                            st.info(f"已存入【{users[student]['name']}】的待审核列表！请你去'待审核批改'页面审定后，学生才能看到哦！")
                         except Exception as e:
                             st.error(f"批改出错了：{e}")
+
+    # ====== 待审核批改 ======
+    elif menu == "待审核批改":
+        st.subheader("🔍 待审核批改（审定后学生才能看到）")
+        student_list = [k for k, v in users.items() if v["role"] == "学生"]
+        has_pending = False
+        
+        for s in student_list:
+            s_user = users[s]
+            pending = s_user["pending_reviews"]
+            if pending:
+                has_pending = True
+                with st.expander(f"{s_user['name']} 的待审核作业"):
+                    for i, q in enumerate(pending):
+                        st.write(f"题目：{q['题目']}")
+                        st.write(f"AI初批提示：{q['ai提示']}")
+                        
+                        # 老师可以修改提示
+                        new_hint = st.text_area(f"你可以修改/补充提示（错因分析也可以写在这里）", value=q["teacher_hint"], key=f"hint_{s}_{i}")
+                        cause = st.text_input("错因分析（可选）", key=f"cause_{s}_{i}")
+                        
+                        if st.button("审核通过，存入错题本", key=f"pass_{s}_{i}"):
+                            # 移到错题本
+                            users[s]["wrong_questions"].append({
+                                "题目": q["题目"],
+                                "学生答案": q["学生答案"],
+                                "提示": new_hint,
+                                "错因分析": cause
+                            })
+                            # 从待审核里删掉
+                            del users[s]["pending_reviews"][i]
+                            save_users(users)
+                            st.success("审核完成！已存入学生错题本，学生现在可以看到了！")
+                            st.rerun()
+        
+        if not has_pending:
+            st.success("太棒了！所有待审核的作业都处理完了！")
 
     # 布置作业
     elif menu == "布置作业":
@@ -236,5 +298,7 @@ else:
                     else:
                         for q in wrong:
                             st.write(f"- {q['题目']} | 提示：{q['提示']}")
+                            if "错因分析" in q and q["错因分析"]:
+                                st.write(f"  错因：{q['错因分析']}")
 
-st.caption("✅ 支持新用户注册｜老师可拍照上传｜AI只给提示｜错题自动归档")
+st.caption("✅ 支持新用户注册｜老师可拍照上传｜AI初批+老师审定｜打印功能｜错题自动归档")
