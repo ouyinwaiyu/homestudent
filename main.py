@@ -37,7 +37,8 @@ def init_data_files():
     # 初始化用户数据
     if not os.path.exists(USER_FILE):
         default_users = {
-            "sys_admin": {
+            # 系统管理员（键必须是手机号）
+            "13800138000": {
                 "phone": "13800138000",
                 "pwd": "admin123456",
                 "nickname": "系统管理员",
@@ -46,7 +47,7 @@ def init_data_files():
                 "org_name": "系统管理后台",
                 "class_name": "系统",
                 "is_authorized": True,
-                "audit_status": "approved",  # pending/approved/rejected
+                "audit_status": "approved",
                 "age_range": "18+",
                 "guardian_agree": True,
                 "agreement_agree": True,
@@ -55,7 +56,8 @@ def init_data_files():
                 "finished_homeworks": [],
                 "token_usage": 0
             },
-            "demo_teacher": {
+            # 老师账号
+            "13900139000": {
                 "phone": "13900139000",
                 "pwd": "teacher123",
                 "nickname": "王老师",
@@ -73,7 +75,8 @@ def init_data_files():
                 "finished_homeworks": [],
                 "token_usage": 0
             },
-            "demo_student": {
+            # 学生账号
+            "13700137000": {
                 "phone": "13700137000",
                 "pwd": "student123",
                 "nickname": "爱学习的张三",
