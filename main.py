@@ -599,11 +599,11 @@ def admin_dashboard():
         st.dataframe(all_details)
     
     # 2. 用户审核管理
-    elif menu == "用户审核管理":
+        elif menu == "用户审核管理":
         st.subheader("机构用户审核")
         admin_config = load_admin_config()
         audit_list = admin_config["audit_list"]
-        
+
         if not audit_list:
             st.success("暂无待审核用户")
         else:
@@ -612,6 +612,7 @@ def admin_dashboard():
                     st.write(f"申请时间：{audit['apply_time']}")
                     st.write(f"机构名称：{audit.get('org_name', '无')}")
                     col1, col2 = st.columns(2)
+
                     with col1:
                         if st.button("审核通过", key=f"audit_approve_{i}"):
                             users = load_users()
@@ -623,6 +624,7 @@ def admin_dashboard():
                             save_admin_config(admin_config)
                             st.success("审核通过！")
                             st.rerun()
+
                     with col2:
                         if st.button("审核驳回", key=f"audit_reject_{i}"):
                             users = load_users()
@@ -633,9 +635,6 @@ def admin_dashboard():
                             save_admin_config(admin_config)
                             st.warning("已驳回！")
                             st.rerun()
-            else:
-                new_audit_list.append(item)
-    
     # 3. 用户权限管理
     elif menu == "用户权限管理":
         st.subheader("用户AI权限管理")
