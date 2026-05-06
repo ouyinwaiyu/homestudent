@@ -422,24 +422,24 @@ def register_page():
 
     # ========= 提交注册（最关键修复在这里！）=========
     if st.button("完成注册"):
-    if not phone:
-        st.error("请输入手机号！")
-    elif not code:
-        st.error("请输入验证码！")
-    elif not nickname:
-        st.error("请输入昵称！")
-    elif not pwd:
-        st.error("请设置密码！")
-    elif not pwd_confirm:
-        st.error("请确认密码！")
-    elif pwd != pwd_confirm:
-        st.error("两次密码不一致！")
-    elif code != "123456":
-        st.error("验证码错误！")
-    elif user_role == "机构管理员/负责人" and not extra_fields.get("org_name"):
-        st.error("请填写机构名称！")
-    elif user_role == "机构管理员/负责人" and not extra_fields.get("contact"):
-        st.error("请填写联系人！")
+        if not phone:
+            st.error("请输入手机号！")
+        elif not code:
+            st.error("请输入验证码！")
+        elif not nickname:
+            st.error("请输入昵称！")
+        elif not pwd:
+            st.error("请设置密码！")
+        elif not pwd_confirm:
+            st.error("请确认密码！")
+        elif pwd != pwd_confirm:
+            st.error("两次密码不一致！")
+        elif code != "123456":
+            st.error("验证码错误！")
+        elif user_role == "机构管理员/负责人" and not extra_fields.get("org_name"):
+            st.error("请填写机构名称！")
+        elif user_role == "机构管理员/负责人" and not extra_fields.get("contact"):
+            st.error("请填写联系人！")
     else:
         users = load_users()
         if phone in users:
