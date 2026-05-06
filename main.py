@@ -363,7 +363,6 @@ def show_agreements():
 def register_page():
     st.title(f"{SOFTWARE_NAME} - 账号注册")
     
-    # 步骤1：选择用户类型
     st.subheader("第一步：选择用户类型")
     user_category = st.radio("用户分类", ["我是个人用户（无需审核）", "我是机构用户（需后台审核）"])
     
@@ -374,11 +373,9 @@ def register_page():
         user_role = st.selectbox("身份类型", ["机构管理员/负责人", "机构下的老师", "机构下的学生"])
         user_type = f"机构-{user_role.replace('机构下的', '')}"
     
-    # 步骤2：手机号验证
     st.subheader("第二步：手机号验证")
     phone = st.text_input("请输入手机号", placeholder="138****0000")
     
-    # 协议勾选（强制）
     col1, col2 = st.columns([1, 4])
     with col1:
         agree_all = st.checkbox("我已阅读并同意")
@@ -387,7 +384,6 @@ def register_page():
         if user_role == "学生":
             st.write("[儿童隐私政策]")
     
-    # 未成年人特殊处理
     guardian_agree = True
     age_range = "18+"
     if user_role == "学生":
@@ -396,61 +392,67 @@ def register_page():
         if age_range != "18周岁以上":
             guardian_agree = st.checkbox("我已获得监护人同意使用本平台")
     
-    # 验证码获取
-    code = ""
     if st.button("获取验证码"):
         if not phone:
             st.error("请输入手机号！")
         elif not agree_all:
-            st.error("请先勾选用户协议和隐私政策！")
-        elif age_range != "18周岁以上" and not guardian_agree:
-            st.error("未成年人需监护人同意后方可继续！")
+            st.error("请先勾选协议！")
+        elif user_role == "学生" and age_range != "18+" and not guardian_agree:
+            st.error("需监护人同意！")
         else:
-            st.info(f"我们将向{phone}发送验证码用于注册/登录，并以此作为您账号的唯一凭证。")
-            st.success("验证码已发送！（测试验证码：123456）")
-    
-    # 步骤3：补充信息
+            st.success("验证码：123456")
+
     st.subheader("第三步：完善信息")
-    nickname = st.text_input("昵称（前台展示名）", placeholder="如：爱学习的张三")
-    pwd = st.text_input("设置登录密码", type="password")
-    pwd_confirm = st.text_input("确认密码", type="password")
     code = st.text_input("请输入验证码", placeholder="6位数字")
-    
-    # 差异化字段
+    nickname = st.text_input("昵称", placeholder="请输入昵称")
+    pwd = st.text_input("设置密码", type="password")
+    pwd_confirm = st.text_input("确认密码", type="password")
+
     extra_fields = {}
-    if user_role == "老师" or user_role == "机构下的老师":
-        extra_fields["subject"] = st.text_input("任教科目", placeholder="如：数学、语文")
-    if user_role == "学生" or user_role == "机构下的学生":
-        extra_fields["grade"] = st.text_input("年级", placeholder="如：三年级、初一")
+    if user_role in ["老师", "机构下的老师"]:
+        extra_fields["subject"] = st.text_input("任教科目", placeholder="如：数学")
+    if user_role in ["学生", "机构下的学生"]:
+        extra_fields["grade"] = st.text_input("年级", placeholder="如：三年级")
     if user_role == "机构管理员/负责人":
-        extra_fields["org_name"] = st.text_input("机构名称", placeholder="如：XX中学、XX培训学校")
-        extra_fields["business_license"] = st.text_input("营业执照号（可选）", placeholder="选填")
-        extra_fields["contact"] = st.text_input("联系人", placeholder="机构对接人")
+        extra_fields["org_name"] = st.text_input("机构名称", placeholder="必填")
+        extra_fields["business_license"] = st.text_input("营业执照号（选填）")
+        extra_fields["contact"] = st.text_input("联系人", placeholder="必填")
     if user_role in ["机构下的老师", "机构下的学生"]:
-        extra_fields["org_code"] = st.text_input("机构码", placeholder="由机构管理员提供")
-    
-    # 提交注册
+        extra_fields["org_code"] = st.text_input("机构码")
+
+    # ========= 提交注册（最关键修复在这里！）=========
     if st.button("完成注册"):
-        # 只校验基础必填项，不校验选填项
-        if not phone or not code or not nickname or not pwd or not pwd_confirm:
-            st.error("请填写完整信息！")
+        # 只判断真正必须的项目
+        if not phone:
+            st.error("请输入手机号")
+        elif not code:
+            st.error("请输入验证码")
+        elif not nickname:
+            st.error("请输入昵称")
+        elif not pwd:
+            st.error("请设置密码")
+        elif not pwd_confirm:
+            st.error("请确认密码")
         elif pwd != pwd_confirm:
-            st.error("两次密码不一致！")
+            st.error("两次密码不一致")
         elif code != "123456":
-            st.error("验证码错误！")
+            st.error("验证码错误")
+        elif user_role == "机构管理员/负责人" and not extra_fields.get("org_name"):
+            st.error("请填写机构名称")
+        elif user_role == "机构管理员/负责人" and not extra_fields.get("contact"):
+            st.error("请填写联系人")
         else:
             users = load_users()
             if phone in users:
-                st.error("该手机号已注册！")
+                st.error("该手机号已注册")
             else:
-                # 构建用户数据
                 new_user = {
                     "phone": phone,
                     "pwd": pwd,
                     "nickname": nickname,
                     "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "系统管理员",
                     "user_type": user_type,
-                    "class_name": extra_fields.get("grade", "") + "1班" if "grade" in extra_fields else "默认班级",
+                    "class_name": extra_fields.get("grade", "默认班级"),
                     "is_authorized": False,
                     "audit_status": "approved" if "个人" in user_type else "pending",
                     "age_range": age_range,
@@ -462,10 +464,9 @@ def register_page():
                     "token_usage": 0
                 }
                 new_user.update(extra_fields)
-                
                 users[phone] = new_user
                 save_users(users)
-                
+
                 if "机构" in user_type:
                     admin_config = load_admin_config()
                     admin_config["audit_list"].append({
@@ -477,14 +478,14 @@ def register_page():
                         "status": "pending"
                     })
                     save_admin_config(admin_config)
-                    st.success("注册成功！机构账号需审核，审核通过后可使用全部功能。")
+                    st.success("注册成功！等待管理员审核")
                 else:
-                    st.success(f"注册成功！欢迎{nickname}使用{SOFTWARE_NAME}！")
+                    st.success("注册成功！")
                 
                 st.session_state.page = "login"
                 st.rerun()
-    
-    if st.button("已有账号？去登录"):
+
+    if st.button("已有账号？返回登录"):
         st.session_state.page = "login"
         st.rerun()
 # ===================== 登录流程 =====================
