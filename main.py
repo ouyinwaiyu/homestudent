@@ -599,7 +599,7 @@ def admin_dashboard():
         st.dataframe(all_details)
     
     # 2. 用户审核管理
-        elif menu == "用户审核管理":
+elif menu == "用户审核管理":
     st.subheader("机构用户审核")
     admin_config = load_admin_config()
     audit_list = admin_config["audit_list"]
