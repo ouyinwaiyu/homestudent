@@ -407,15 +407,14 @@ def register_page():
             st.error("未成年人需监护人同意后方可继续！")
         else:
             st.info(f"我们将向{phone}发送验证码用于注册/登录，并以此作为您账号的唯一凭证。")
-            # 模拟验证码发送（实际项目需对接短信接口）
             st.success("验证码已发送！（测试验证码：123456）")
-            code = st.text_input("请输入验证码", placeholder="6位数字")
     
     # 步骤3：补充信息
     st.subheader("第三步：完善信息")
     nickname = st.text_input("昵称（前台展示名）", placeholder="如：爱学习的张三")
     pwd = st.text_input("设置登录密码", type="password")
     pwd_confirm = st.text_input("确认密码", type="password")
+    code = st.text_input("请输入验证码", placeholder="6位数字")
     
     # 差异化字段
     extra_fields = {}
@@ -431,65 +430,63 @@ def register_page():
         extra_fields["org_code"] = st.text_input("机构码", placeholder="由机构管理员提供")
     
     # 提交注册
-if st.button("完成注册"):
-    # 基础必填项
-    if not phone or not nickname or not pwd or not pwd_confirm:
-        st.error("请填写完整信息！")
-    elif pwd != pwd_confirm:
-        st.error("两次密码不一致！")
-    elif code != "123456":  # 测试验证码
-        st.error("验证码错误！")
-    else:
-        users = load_users()
-        # 手机号作为唯一ID
-        if phone in users:
-            st.error("该手机号已注册！")
+    if st.button("完成注册"):
+        # 只校验基础必填项，不校验选填项
+        if not phone or not code or not nickname or not pwd or not pwd_confirm:
+            st.error("请填写完整信息！")
+        elif pwd != pwd_confirm:
+            st.error("两次密码不一致！")
+        elif code != "123456":
+            st.error("验证码错误！")
         else:
-            # 构建用户数据
-            new_user = {
-                "phone": phone,
-                "pwd": pwd,
-                "nickname": nickname,
-                "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "系统管理员",
-                "user_type": user_type,
-                "class_name": extra_fields.get("grade", "") + "1班" if "grade" in extra_fields else "默认班级",
-                "is_authorized": False,  # 默认未授权
-                "audit_status": "approved" if "个人" in user_type else "pending",
-                "age_range": age_range,
-                "guardian_agree": guardian_agree,
-                "agreement_agree": agree_all,
-                "wrong_questions": [],
-                "pending_reviews": [],
-                "finished_homeworks": [],
-                "token_usage": 0
-            }
-            # 补充额外字段
-            new_user.update(extra_fields)
-            
-            # 保存用户
-            users[phone] = new_user
-            save_users(users)
-            
-            # 机构用户加入审核列表
-            if "机构" in user_type:
-                admin_config = load_admin_config()
-                admin_config["audit_list"].append({
-                    "user_id": phone,
-                    "nickname": nickname,
-                    "user_type": user_type,
-                    "org_name": extra_fields.get("org_name", ""),
-                    "apply_time": datetime.now().isoformat(),
-                    "status": "pending"
-                })
-                save_admin_config(admin_config)
-                st.success("注册成功！机构账号需审核，审核通过后可使用全部功能。")
+            users = load_users()
+            if phone in users:
+                st.error("该手机号已注册！")
             else:
-                st.success(f"注册成功！欢迎{nickname}使用{SOFTWARE_NAME}！")
-            
-            # 跳转到登录页
-            st.session_state.page = "login"
-            st.rerun()
-
+                # 构建用户数据
+                new_user = {
+                    "phone": phone,
+                    "pwd": pwd,
+                    "nickname": nickname,
+                    "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "系统管理员",
+                    "user_type": user_type,
+                    "class_name": extra_fields.get("grade", "") + "1班" if "grade" in extra_fields else "默认班级",
+                    "is_authorized": False,
+                    "audit_status": "approved" if "个人" in user_type else "pending",
+                    "age_range": age_range,
+                    "guardian_agree": guardian_agree,
+                    "agreement_agree": agree_all,
+                    "wrong_questions": [],
+                    "pending_reviews": [],
+                    "finished_homeworks": [],
+                    "token_usage": 0
+                }
+                new_user.update(extra_fields)
+                
+                users[phone] = new_user
+                save_users(users)
+                
+                if "机构" in user_type:
+                    admin_config = load_admin_config()
+                    admin_config["audit_list"].append({
+                        "user_id": phone,
+                        "nickname": nickname,
+                        "user_type": user_type,
+                        "org_name": extra_fields.get("org_name", ""),
+                        "apply_time": datetime.now().isoformat(),
+                        "status": "pending"
+                    })
+                    save_admin_config(admin_config)
+                    st.success("注册成功！机构账号需审核，审核通过后可使用全部功能。")
+                else:
+                    st.success(f"注册成功！欢迎{nickname}使用{SOFTWARE_NAME}！")
+                
+                st.session_state.page = "login"
+                st.rerun()
+    
+    if st.button("已有账号？去登录"):
+        st.session_state.page = "login"
+        st.rerun()
 # ===================== 登录流程 =====================
 def login_page():
     st.title(f"{SOFTWARE_NAME} - 账号登录")
