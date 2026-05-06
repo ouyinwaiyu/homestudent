@@ -600,41 +600,39 @@ def admin_dashboard():
         st.dataframe(all_details)
     
     # 2. 用户审核管理
-elif menu == "用户审核管理":
-    st.subheader("机构用户审核")
-    admin_config = load_admin_config()
-    audit_list = admin_config["audit_list"]
-
-    if not audit_list:
-        st.success("暂无待审核用户")
-    else:
-        new_audit_list = []
-        for item in audit_list:
-            if item.get("status") == "pending":
-                with st.expander(f"{item['nickname']} - {item['user_type']}"):
-                    st.write(f"申请时间：{item['apply_time']}")
-                    st.write(f"机构名称：{item.get('org_name','无')}")
+    elif menu == "用户审核管理":
+        st.subheader("机构用户审核")
+        admin_config = load_admin_config()
+        audit_list = admin_config["audit_list"]
+        
+        if not audit_list:
+            st.success("暂无待审核用户")
+        else:
+            for i, audit in enumerate(audit_list):
+                with st.expander(f"{audit['nickname']} - {audit['user_type']}"):
+                    st.write(f"申请时间：{audit['apply_time']}")
+                    st.write(f"机构名称：{audit.get('org_name', '无')}")
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("✅ 审核通过", key=f"ok_{item['user_id']}"):
+                        if st.button("审核通过", key=f"audit_approve_{i}"):
                             users = load_users()
-                            if item["user_id"] in users:
-                                users[item["user_id"]]["audit_status"] = "approved"
-                                users[item["user_id"]]["is_authorized"] = True
+                            if audit["user_id"] in users:
+                                users[audit["user_id"]]["audit_status"] = "approved"
+                                users[audit["user_id"]]["is_authorized"] = True
                                 save_users(users)
-                            item["status"] = "approved"
+                            admin_config["audit_list"][i]["status"] = "approved"
                             save_admin_config(admin_config)
-                            st.success("已审核通过")
+                            st.success("审核通过！")
                             st.rerun()
                     with col2:
-                        if st.button("❌ 审核驳回", key=f"no_{item['user_id']}"):
+                        if st.button("审核驳回", key=f"audit_reject_{i}"):
                             users = load_users()
-                            if item["user_id"] in users:
-                                users[item["user_id"]]["audit_status"] = "rejected"
+                            if audit["user_id"] in users:
+                                users[audit["user_id"]]["audit_status"] = "rejected"
                                 save_users(users)
-                            item["status"] = "rejected"
+                            admin_config["audit_list"][i]["status"] = "rejected"
                             save_admin_config(admin_config)
-                            st.warning("已驳回")
+                            st.warning("已驳回！")
                             st.rerun()
             else:
                 new_audit_list.append(item)
