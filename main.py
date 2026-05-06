@@ -34,69 +34,85 @@ os.makedirs(PDF_STORE, exist_ok=True)
 
 # ===================== 初始化数据文件 =====================
 def init_data_files():
-    # 初始化用户数据
-    if not os.path.exists(USER_FILE):
-        default_users = {
-            # 系统管理员（键必须是手机号）
-            "13800138000": {
-                "phone": "13800138000",
-                "pwd": "admin123456",
-                "nickname": "系统管理员",
-                "role": "系统管理员",
-                "user_type": "机构-管理员",
-                "org_name": "系统管理后台",
-                "class_name": "系统",
-                "is_authorized": True,
-                "audit_status": "approved",
-                "age_range": "18+",
-                "guardian_agree": True,
-                "agreement_agree": True,
-                "wrong_questions": [],
-                "pending_reviews": [],
-                "finished_homeworks": [],
-                "token_usage": 0
-            },
-            # 老师账号
-            "13900139000": {
-                "phone": "13900139000",
-                "pwd": "teacher123",
-                "nickname": "王老师",
-                "role": "教师",
-                "user_type": "个人-老师",
-                "subject": "数学",
-                "class_name": "三年级1班",
-                "is_authorized": True,
-                "audit_status": "approved",
-                "age_range": "18+",
-                "guardian_agree": True,
-                "agreement_agree": True,
-                "wrong_questions": [],
-                "pending_reviews": [],
-                "finished_homeworks": [],
-                "token_usage": 0
-            },
-            # 学生账号
-            "13700137000": {
-                "phone": "13700137000",
-                "pwd": "student123",
-                "nickname": "爱学习的张三",
-                "role": "学生",
-                "user_type": "个人-学生",
-                "grade": "三年级",
-                "class_name": "三年级1班",
-                "is_authorized": True,
-                "audit_status": "approved",
-                "age_range": "14-18",
-                "guardian_agree": True,
-                "agreement_agree": True,
-                "wrong_questions": [],
-                "pending_reviews": [],
-                "finished_homeworks": [],
-                "token_usage": 0
+    default_users = {
+        "13800138000": {
+            "phone": "13800138000",
+            "pwd": "admin123456",
+            "nickname": "系统管理员",
+            "role": "系统管理员",
+            "user_type": "机构-管理员",
+            "org_name": "系统管理后台",
+            "class_name": "系统",
+            "is_authorized": True,
+            "audit_status": "approved",
+            "age_range": "18+",
+            "guardian_agree": True,
+            "agreement_agree": True,
+            "wrong_questions": [],
+            "pending_reviews": [],
+            "finished_homeworks": [],
+            "token_usage": 0
+        },
+        "13900139000": {
+            "phone": "13900139000",
+            "pwd": "teacher123",
+            "nickname": "王老师",
+            "role": "教师",
+            "user_type": "个人-老师",
+            "subject": "数学",
+            "class_name": "三年级1班",
+            "is_authorized": True,
+            "audit_status": "approved",
+            "age_range": "18+",
+            "guardian_agree": True,
+            "agreement_agree": True,
+            "wrong_questions": [],
+            "pending_reviews": [],
+            "finished_homeworks": [],
+            "token_usage": 0
+        },
+        "13700137000": {
+            "phone": "13700137000",
+            "pwd": "student123",
+            "nickname": "爱学习的张三",
+            "role": "学生",
+            "user_type": "个人-学生",
+            "grade": "三年级",
+            "class_name": "三年级1班",
+            "is_authorized": True,
+            "audit_status": "approved",
+            "age_range": "14-18",
+            "guardian_agree": True,
+            "agreement_agree": True,
+            "wrong_questions": [],
+            "pending_reviews": [],
+            "finished_homeworks": [],
+            "token_usage": 0
+        }
+    }
+    with open(USER_FILE, "w", encoding="utf-8") as f:
+        json.dump(default_users, f, ensure_ascii=False, indent=2)
+
+    if not os.path.exists(TOKEN_LOG_FILE):
+        token_log = {
+            "total_usage": 0,
+            "daily_log": {},
+            "user_log": {}
+        }
+        with open(TOKEN_LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(token_log, f, ensure_ascii=False, indent=2)
+
+    if not os.path.exists(ADMIN_CONFIG):
+        admin_config = {
+            "audit_list": [],
+            "org_codes": {},
+            "system_settings": {
+                "token_per_question": TOKEN_PER_QUESTION,
+                "student_delete_days": STUDENT_DELETE_DAYS
             }
         }
-        with open(USER_FILE, "w", encoding="utf-8") as f:
-            json.dump(default_users, f, ensure_ascii=False, indent=2)
+        with open(ADMIN_CONFIG, "w", encoding="utf-8") as f:
+            json.dump(admin_config, f, ensure_ascii=False, indent=2)
     
     # 初始化Token日志
     if not os.path.exists(TOKEN_LOG_FILE):
