@@ -450,7 +450,7 @@ def register_page():
                     "phone": phone,
                     "pwd": pwd,
                     "nickname": nickname,
-                    "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "系统管理员",
+                    "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "机构管理员",
                     "user_type": user_type,
                     "class_name": extra_fields.get("grade", "默认班级"),
                     "is_authorized": False,
