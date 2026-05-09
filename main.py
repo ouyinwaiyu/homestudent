@@ -445,44 +445,37 @@ def register_page():
         extra_fields["org_code"] = st.text_input("机构码")
 
     # ========= 提交注册（最关键修复在这里！）=========
-    if st.button("完成注册"):
-        if not phone:
-            st.error("请输入手机号！")
-        elif code != "123456":
-            st.error("验证码错误！")
-        elif not nickname:
-            st.error("请输入昵称！")
-        elif not pwd:
-            st.error("请输入密码！")
-        elif pwd != pwd_confirm:
-            st.error("两次密码不一致！")
-        elif user_role == "机构管理员/负责人" and not extra_fields.get("org_name"):
-            st.error("请填写机构名称！")
-        else:
+    # 注册按钮
+if st.button("注册", key="register_btn", use_container_width=True):
+    if not username or not password:
+        st.error("用户名和密码不能为空！")
+    elif check_user_exists(username):
+        st.error("用户名已存在！")
+    else:
+        try:
+            # 读取用户列表
             try:
                 with open("users.json", "r", encoding="utf-8") as f:
                     users = json.load(f)
             except:
-                users = {}
+                users = []
 
-            if phone in users:
-                st.error("该手机号已注册！")
-            else:
-                users[phone] = {
-                    "phone": phone,
-                    "pwd": pwd,
-                    "nickname": nickname,
-                    "role": user_role,
-                    "audit_status": "待审核",
-                    "is_authorized": False
-                }
+            # 添加新用户（待审核）
+            users.append({
+                "username": username,
+                "password": password,
+                "status": "待审核"
+            })
 
-                with open("users.json", "w", encoding="utf-8") as f:
-                    json.dump(users, f, ensure_ascii=False, indent=4)
+            # 保存文件
+            with open("users.json", "w", encoding="utf-8") as f:
+                json.dump(users, f, ensure_ascii=False, indent=4)
 
-                st.success("注册成功！等待管理员审核！")
-                st.session_state.page = "login"
-                st.rerun()
+            st.success("注册成功！等待管理员审核！")
+            st.info("请等待管理员审核通过后再登录")
+
+        except Exception as e:
+            st.error(f"注册失败：{str(e)}")
 
     if st.button("已有账号？返回登录"):
         st.session_state.page = "login"
