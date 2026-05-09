@@ -520,6 +520,10 @@ def login_page():
                 st.session_state.user_id = phone
                 st.success(f"欢迎回来，{users[phone]['nickname']}！")
                 st.rerun()
+                st.markdown("---")
+                if st.button("没有账号？去注册"):
+                    st.session_state.page = "register"
+                    st.rerun()
             else:
                 # 给用户明确的错误提示，而不是笼统的“错误”
                 if phone not in users:
