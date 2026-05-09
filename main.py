@@ -461,7 +461,8 @@ if st.button("注册", key="register_btn", use_container_width=True):
             "nickname": nickname,
             "role": user_role,
             "audit_status": "待审核",
-            "is_authorized": False
+            "is_authorized": False，
+            **extra_fields
         }
 
         with open("users.json", "w", encoding="utf-8") as f:
