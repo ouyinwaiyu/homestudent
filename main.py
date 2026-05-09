@@ -440,49 +440,49 @@ def register_page():
             st.error("请填写机构名称！")
         elif user_role == "机构管理员/负责人" and not extra_fields.get("contact"):
             st.error("请填写联系人！")
-    else:
-        users = load_users()
-        if phone in users:
-            st.error("该手机号已注册！")
         else:
-            new_user = {
-                "phone": phone,
-                "pwd": pwd,
-                "nickname": nickname,
-                "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "机构管理员",
-                "user_type": user_type,
-                "class_name": extra_fields.get("grade", "默认班级"),
-                "is_authorized": False,
-                "audit_status": "approved" if "个人" in user_type else "pending",
-                "age_range": age_range,
-                "guardian_agree": guardian_agree,
-                "agreement_agree": agree_all,
-                "wrong_questions": [],
-                "pending_reviews": [],
-                "finished_homeworks": [],
-                "token_usage": 0
-            }
-            new_user.update(extra_fields)
-            users[phone] = new_user
-            save_users(users)
-
-            if "机构" in user_type:
-                admin_config = load_admin_config()
-                admin_config["audit_list"].append({
-                    "user_id": phone,
-                    "nickname": nickname,
-                    "user_type": user_type,
-                    "org_name": extra_fields.get("org_name", ""),
-                    "apply_time": datetime.now().isoformat(),
-                    "status": "pending"
-                })
-                save_admin_config(admin_config)
-                st.success("注册成功！等待管理员审核")
+            users = load_users()
+            if phone in users:
+                st.error("该手机号已注册！")
             else:
-                st.success("注册成功！")
+                new_user = {
+                    "phone": phone,
+                    "pwd": pwd,
+                    "nickname": nickname,
+                    "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "机构管理员",
+                    "user_type": user_type,
+                    "class_name": extra_fields.get("grade", "默认班级"),
+                    "is_authorized": False,
+                    "audit_status": "approved" if "个人" in user_type else "pending",
+                    "age_range": age_range,
+                    "guardian_agree": guardian_agree,
+                    "agreement_agree": agree_all,
+                    "wrong_questions": [],
+                    "pending_reviews": [],
+                    "finished_homeworks": [],
+                    "token_usage": 0
+                }
+                new_user.update(extra_fields)
+                users[phone] = new_user
+                save_users(users)
+
+                if "机构" in user_type:
+                    admin_config = load_admin_config()
+                    admin_config["audit_list"].append({
+                        "user_id": phone,
+                        "nickname": nickname,
+                        "user_type": user_type,
+                        "org_name": extra_fields.get("org_name", ""),
+                        "apply_time": datetime.now().isoformat(),
+                        "status": "pending"
+                    })
+                    save_admin_config(admin_config)
+                    st.success("注册成功！等待管理员审核")
+                else:
+                    st.success("注册成功！")
             
-            st.session_state.page = "login"
-            st.rerun()
+                st.session_state.page = "login"
+                st.rerun()
 
     if st.button("已有账号？返回登录"):
         st.session_state.page = "login"
