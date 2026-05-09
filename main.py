@@ -489,7 +489,7 @@ def register_page():
                 new_user.update(extra_fields)
                 users[phone] = new_user
                 save_users(users)
-
+                print("✅ 已保存用户：", users)
                 if "机构" in user_type:
                     admin_config = load_admin_config()
                     admin_config["audit_list"].append({
