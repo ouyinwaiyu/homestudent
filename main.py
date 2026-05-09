@@ -423,6 +423,8 @@ def register_page():
     if user_category == "我是机构用户（需后台审核）":
         extra_fields["org_name"] = st.text_input("机构名称")
         extra_fields["org_code"] = st.text_input("机构编码")
+        if user_role in ["机构管理员/负责人", "机构下的老师", "机构下的学生"]:
+            extra_fields["contact"] = st.text_input("联系人", placeholder="必填")
 
     if st.button("注册", key="register_btn", use_container_width=True):
         if not agree_all:
@@ -455,6 +457,12 @@ def register_page():
                     json.dump(users, f, ensure_ascii=False, indent=4)
 
                 st.success("✅ 注册成功！等待管理员审核！" if user_category == "我是机构用户（需后台审核）" else "✅ 注册成功！")
+
+    # 加回退出/返回按钮
+    st.markdown("---")
+    if st.button("返回首页 / 退出", use_container_width=True):
+        st.session_state["page"] = "home"
+        st.experimental_rerun()
 # ===================== 登录流程 =====================
 def login_page():
     # 强制读取用户文件
