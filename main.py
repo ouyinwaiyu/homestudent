@@ -513,28 +513,45 @@ def register_page():
         st.rerun()
 # ===================== 登录流程 =====================
 def login_page():
-    print("当前所有用户：", load_users())
+    # 强制读取文件，绕过不稳定的 load_users()
+    try:
+        with open("users.json", "r", encoding="utf-8") as f:
+            users = json.load(f)
+    except Exception as e:
+        print("读取用户文件失败：", e)
+        users = {}
+
     st.title(f"{SOFTWARE_NAME} - 账号登录")
-    
+
     # 登录方式选择
     login_type = st.radio("登录方式", ["手机号+密码", "手机号+验证码"])
-    
     phone = st.text_input("手机号")
+
     if login_type == "手机号+密码":
         pwd = st.text_input("密码", type="password")
         if st.button("登录"):
-            users = load_users()
+            # 再次读取，确保拿到最新数据
+            try:
+                with open("users.json", "r", encoding="utf-8") as f:
+                    users = json.load(f)
+            except:
+                users = {}
+
+            # 关键校验：手机号是否存在 + 密码是否匹配
             if phone in users and users[phone]["pwd"] == pwd:
-                # 验证通过
                 st.session_state.logged_in = True
                 st.session_state.user = users[phone]
                 st.session_state.user_id = phone
                 st.success(f"欢迎回来，{users[phone]['nickname']}！")
                 st.rerun()
             else:
-                st.error("手机号或密码错误！")
+                # 给用户明确的错误提示，而不是笼统的“错误”
+                if phone not in users:
+                    st.error("❌ 该手机号未注册")
+                else:
+                    st.error("❌ 密码错误")
     else:
-        # 验证码登录
+        # 验证码登录（保持你的逻辑）
         code = st.text_input("验证码")
         if st.button("获取验证码"):
             if not phone:
@@ -548,19 +565,6 @@ def login_page():
                 st.session_state.user = users[phone]
                 st.session_state.user_id = phone
                 st.success(f"欢迎回来，{users[phone]['nickname']}！")
-                st.rerun()
-            else:
-                st.error("验证码错误或手机号未注册！")
-    
-    # 注册入口
-    if st.button("还没有账号？立即注册"):
-        st.session_state.page = "register"
-        st.rerun()
-    
-    # 协议查看入口
-    if st.button("查看用户协议和隐私政策"):
-        show_agreements()
-
 # ===================== 管理后台 =====================
 def admin_dashboard():
     st.title(f"{SOFTWARE_NAME} - 系统管理后台")
