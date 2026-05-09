@@ -444,39 +444,34 @@ def register_page():
     if user_role in ["机构下的老师", "机构下的学生"]:
         extra_fields["org_code"] = st.text_input("机构码")
 
-    # ========= 提交注册（最关键修复在这里！）=========
-    # 注册按钮
+# ============= 提交注册（最终修复版） =============
+# 注册按钮
 if st.button("注册", key="register_btn", use_container_width=True):
-    if not username or not password:
-        st.error("用户名和密码不能为空！")
-    elif check_user_exists(username):
+    # 读取用户列表
+    try:
+        with open("users.json", "r", encoding="utf-8") as f:
+            users = json.load(f)
+    except:
+        users = []
+
+    # 检查用户是否已存在
+    user_exists = any(u["username"] == username for u in users)
+    if user_exists:
         st.error("用户名已存在！")
     else:
-        try:
-            # 读取用户列表
-            try:
-                with open("users.json", "r", encoding="utf-8") as f:
-                    users = json.load(f)
-            except:
-                users = []
+        # 添加新用户（待审核）
+        users.append({
+            "username": username,
+            "password": password,
+            "status": "待审核"
+        })
 
-            # 添加新用户（待审核）
-            users.append({
-                "username": username,
-                "password": password,
-                "status": "待审核"
-            })
+        # 保存文件
+        with open("users.json", "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=4)
 
-            # 保存文件
-            with open("users.json", "w", encoding="utf-8") as f:
-                json.dump(users, f, ensure_ascii=False, indent=4)
-
-            st.success("注册成功！等待管理员审核！")
-            st.info("请等待管理员审核通过后再登录")
-
-        except Exception as e:
-            st.error(f"注册失败：{str(e)}")
-
+        st.success("注册成功！等待管理员审核！")
+        st.info("请等待管理员审核通过后再登录")
     if st.button("已有账号？返回登录"):
         st.session_state.page = "login"
         st.rerun()
