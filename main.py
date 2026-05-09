@@ -443,13 +443,21 @@ def register_page():
             if phone in users:
                 st.error("该手机号已注册！")
             else:
+                # 修正机构用户字段，确保后台能识别为待审核
+                if user_category == "我是机构用户（需后台审核）":
+                    audit_status = "待审核"
+                    is_authorized = False
+                else:
+                    audit_status = "已通过"
+                    is_authorized = True
+
                 users[phone] = {
                     "phone": phone,
                     "pwd": pwd,
                     "nickname": nickname,
                     "role": user_type,
-                    "audit_status": "待审核" if user_category == "我是机构用户（需后台审核）" else "已通过",
-                    "is_authorized": user_category != "我是机构用户（需后台审核）",
+                    "audit_status": audit_status,
+                    "is_authorized": is_authorized,
                     **extra_fields
                 }
 
@@ -458,7 +466,7 @@ def register_page():
 
                 st.success("✅ 注册成功！等待管理员审核！" if user_category == "我是机构用户（需后台审核）" else "✅ 注册成功！")
 
-    # 加回退出/返回按钮
+    # 修复返回按钮，使用新版 API
     st.markdown("---")
     if st.button("返回首页 / 退出", use_container_width=True):
         st.session_state["page"] = "home"
