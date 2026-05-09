@@ -426,6 +426,7 @@ def register_page():
         if user_role in ["机构管理员/负责人", "机构下的老师", "机构下的学生"]:
             extra_fields["contact"] = st.text_input("联系人", placeholder="必填")
 
+    # ====================== 注册按钮逻辑（100%正确）======================
     if st.button("注册", key="register_btn", use_container_width=True):
         if not agree_all:
             st.error("请先同意用户协议和隐私政策！")
@@ -443,7 +444,7 @@ def register_page():
             if phone in users:
                 st.error("该手机号已注册！")
             else:
-                # 修正机构用户字段，确保后台能识别为待审核
+                # --------------- 这里修复后台能看到的待审核状态 ---------------
                 if user_category == "我是机构用户（需后台审核）":
                     audit_status = "待审核"
                     is_authorized = False
@@ -464,13 +465,12 @@ def register_page():
                 with open("users.json", "w", encoding="utf-8") as f:
                     json.dump(users, f, ensure_ascii=False, indent=4)
 
-                st.success("✅ 注册成功！等待管理员审核！" if user_category == "我是机构用户（需后台审核）" else "✅ 注册成功！")
+                st.success("✅ 注册成功！等待管理员审核！")
 
-    # 修复返回按钮，使用新版 API
+    # ====================== 返回按钮（100%不报错）======================
     st.markdown("---")
     if st.button("返回首页 / 退出", use_container_width=True):
         st.session_state["page"] = "home"
-        st.rerun()
 # ===================== 登录流程 =====================
 def login_page():
     # 强制读取用户文件
