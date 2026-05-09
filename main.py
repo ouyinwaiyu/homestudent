@@ -445,7 +445,7 @@ def register_page():
         extra_fields["org_code"] = st.text_input("机构码")
 
     # ========= 提交注册（最关键修复在这里！）=========
-        if st.button("完成注册"):
+    if st.button("完成注册"):
         if not phone:
             st.error("请输入手机号！")
         elif code != "123456":
