@@ -513,6 +513,7 @@ def register_page():
         st.rerun()
 # ===================== 登录流程 =====================
 def login_page():
+    print("当前所有用户：", load_users())
     st.title(f"{SOFTWARE_NAME} - 账号登录")
     
     # 登录方式选择
