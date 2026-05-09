@@ -12,9 +12,6 @@ from reportlab.lib.colors import red, green, blue
 from PIL import Image
 import uuid
 # 自动创建必需的配置文件
-import os
-import json
-
 if not os.path.exists("users.json"):
     with open("users.json", "w") as f:
         json.dump({}, f)
