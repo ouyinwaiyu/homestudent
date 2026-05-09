@@ -489,62 +489,65 @@ def register_page():
         st.rerun()
 # ===================== 登录流程 =====================
 def login_page():
-    # 强制读取文件，绕过不稳定的 load_users()
+    # 强制读取用户文件
     try:
         with open("users.json", "r", encoding="utf-8") as f:
             users = json.load(f)
-    except Exception as e:
-        print("读取用户文件失败：", e)
+    except:
         users = {}
 
     st.title(f"{SOFTWARE_NAME} - 账号登录")
 
-    # 登录方式选择
     login_type = st.radio("登录方式", ["手机号+密码", "手机号+验证码"])
     phone = st.text_input("手机号")
 
     if login_type == "手机号+密码":
         pwd = st.text_input("密码", type="password")
         if st.button("登录"):
-            # 再次读取，确保拿到最新数据
+            # 登录时再次读取，确保最新
             try:
                 with open("users.json", "r", encoding="utf-8") as f:
                     users = json.load(f)
             except:
                 users = {}
 
-            # 关键校验：手机号是否存在 + 密码是否匹配
             if phone in users and users[phone]["pwd"] == pwd:
                 st.session_state.logged_in = True
                 st.session_state.user = users[phone]
                 st.session_state.user_id = phone
                 st.success(f"欢迎回来，{users[phone]['nickname']}！")
                 st.rerun()
-                st.markdown("---")
-                if st.button("没有账号？去注册"):
-                    st.session_state.page = "register"
-                    st.rerun()
             else:
-                # 给用户明确的错误提示，而不是笼统的“错误”
                 if phone not in users:
                     st.error("❌ 该手机号未注册")
                 else:
                     st.error("❌ 密码错误")
     else:
-        # 验证码登录（保持你的逻辑）
         code = st.text_input("验证码")
         if st.button("获取验证码"):
             if not phone:
                 st.error("请输入手机号！")
             else:
-                st.info(f"验证码已发送至{phone}（测试码：123456）")
+                st.info(f"验证码测试码：123456")
         if st.button("登录"):
-            users = load_users()
+            try:
+                with open("users.json", "r", encoding="utf-8") as f:
+                    users = json.load(f)
+            except:
+                users = {}
+
             if phone in users and code == "123456":
                 st.session_state.logged_in = True
                 st.session_state.user = users[phone]
                 st.session_state.user_id = phone
                 st.success(f"欢迎回来，{users[phone]['nickname']}！")
+                st.rerun()
+
+    # 👇 新增的注册入口
+    st.markdown("---")
+    if st.button("没有账号？去注册"):
+        st.session_state.page = "register"
+        st.rerun()
 # ===================== 管理后台 =====================
 def admin_dashboard():
     st.title(f"{SOFTWARE_NAME} - 系统管理后台")
