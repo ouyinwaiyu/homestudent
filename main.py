@@ -11,7 +11,34 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.colors import red, green, blue
 from PIL import Image
 import uuid
+# 自动创建必需的配置文件
+import os
+import json
 
+if not os.path.exists("users.json"):
+    with open("users.json", "w") as f:
+        json.dump({}, f)
+
+if not os.path.exists("admin_config.json"):
+    with open("admin_config.json", "w") as f:
+        json.dump({"audit_list": []}, f)
+
+# 用户数据操作函数
+def load_users():
+    with open("users.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_users(users):
+    with open("users.json", "w", encoding="utf-8") as f:
+        json.dump(users, f, indent=4, ensure_ascii=False)
+
+def load_admin_config():
+    with open("admin_config.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_admin_config(config):
+    with open("admin_config.json", "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=4, ensure_ascii=False)
 # ===================== 系统核心配置 =====================
 # 软件名称全局定义
 SOFTWARE_NAME = "onego学管"
