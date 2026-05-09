@@ -462,7 +462,7 @@ def register_page():
     st.markdown("---")
     if st.button("返回首页 / 退出", use_container_width=True):
         st.session_state["page"] = "home"
-        st.experimental_rerun()
+        st.rerun()
 # ===================== 登录流程 =====================
 def login_page():
     # 强制读取用户文件
