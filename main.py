@@ -386,20 +386,20 @@ def show_agreements():
 # ===================== 注册流程 =====================
 def register_page():
     st.title(f"{SOFTWARE_NAME} - 账号注册")
-    
+
     st.subheader("第一步：选择用户类型")
     user_category = st.radio("用户分类", ["我是个人用户（无需审核）", "我是机构用户（需后台审核）"])
-    
+
     if user_category == "我是个人用户（无需审核）":
         user_role = st.selectbox("身份类型", ["学生", "老师"])
         user_type = f"个人-{user_role}"
     else:
         user_role = st.selectbox("身份类型", ["机构管理员/负责人", "机构下的老师", "机构下的学生"])
         user_type = f"机构-{user_role.replace('机构下的', '')}"
-    
+
     st.subheader("第二步：手机号验证")
     phone = st.text_input("请输入手机号", placeholder="138****0000")
-    
+
     col1, col2 = st.columns([1, 4])
     with col1:
         agree_all = st.checkbox("我已阅读并同意")
@@ -407,7 +407,7 @@ def register_page():
         st.write("[用户协议] [隐私政策]")
         if user_role == "学生":
             st.write("[儿童隐私政策]")
-    
+
     guardian_agree = True
     age_range = "18+"
     if user_role == "学生":
@@ -415,61 +415,46 @@ def register_page():
         age_range = st.radio("年龄区间", ["14周岁以下", "14-18周岁", "18周岁以上"])
         if age_range != "18周岁以上":
             guardian_agree = st.checkbox("我已获得监护人同意使用本平台")
-    
-    if st.button("获取验证码"):
-        if not phone:
-            st.error("请输入手机号！")
-        elif not agree_all:
-            st.error("请先勾选协议！")
-        elif user_role == "学生" and age_range != "18+" and not guardian_agree:
-            st.error("需监护人同意！")
-        else:
-            st.success("验证码：123456")
 
-    st.subheader("第三步：完善信息")
-    code = st.text_input("请输入验证码", placeholder="6位数字")
-    nickname = st.text_input("昵称", placeholder="请输入昵称")
-    pwd = st.text_input("设置密码", type="password")
-    pwd_confirm = st.text_input("确认密码", type="password")
+    pwd = st.text_input("请设置登录密码", type="password")
+    nickname = st.text_input("请输入昵称")
 
     extra_fields = {}
-    if user_role in ["老师", "机构下的老师"]:
-        extra_fields["subject"] = st.text_input("任教科目", placeholder="如：数学")
-    if user_role in ["学生", "机构下的学生"]:
-        extra_fields["grade"] = st.text_input("年级", placeholder="如：三年级")
-    if user_role == "机构管理员/负责人":
-        extra_fields["org_name"] = st.text_input("机构名称", placeholder="必填")
-        extra_fields["business_license"] = st.text_input("营业执照号（选填）")
-        extra_fields["contact"] = st.text_input("联系人", placeholder="必填")
-    if user_role in ["机构下的老师", "机构下的学生"]:
-        extra_fields["org_code"] = st.text_input("机构码")
+    if user_category == "我是机构用户（需后台审核）":
+        extra_fields["org_name"] = st.text_input("机构名称")
+        extra_fields["org_code"] = st.text_input("机构编码")
 
-# ============= 提交注册（最终修复版） =============
-if st.button("注册", key="register_btn", use_container_width=True):
-    try:
-        with open("users.json", "r", encoding="utf-8") as f:
-            users = json.load(f)
-    except:
-        users = {}
+    if st.button("注册", key="register_btn", use_container_width=True):
+        if not agree_all:
+            st.error("请先同意用户协议和隐私政策！")
+        elif user_role == "学生" and age_range != "18周岁以上" and not guardian_agree:
+            st.error("请勾选监护人同意声明！")
+        elif not phone or not pwd or not nickname:
+            st.error("手机号、密码、昵称不能为空！")
+        else:
+            try:
+                with open("users.json", "r", encoding="utf-8") as f:
+                    users = json.load(f)
+            except:
+                users = {}
 
-    if phone in users:
-        st.error("该手机号已注册！")
-    else:
-        users[phone] = {
-            "phone": phone,
-            "pwd": pwd,
-            "nickname": nickname,
-            "role": user_role,
-            "audit_status": "待审核",
-            "is_authorized": False,
-            **extra_fields
-        }
+            if phone in users:
+                st.error("该手机号已注册！")
+            else:
+                users[phone] = {
+                    "phone": phone,
+                    "pwd": pwd,
+                    "nickname": nickname,
+                    "role": user_type,
+                    "audit_status": "待审核" if user_category == "我是机构用户（需后台审核）" else "已通过",
+                    "is_authorized": user_category != "我是机构用户（需后台审核）",
+                    **extra_fields
+                }
 
-        with open("users.json", "w", encoding="utf-8") as f:
-            json.dump(users, f, ensure_ascii=False, indent=4)
+                with open("users.json", "w", encoding="utf-8") as f:
+                    json.dump(users, f, ensure_ascii=False, indent=4)
 
-        st.success("✅ 注册成功！等待管理员审核！")
-        st.info("请等待管理员审核通过后再登录，审核状态可在登录页查看。")
+                st.success("✅ 注册成功！等待管理员审核！" if user_category == "我是机构用户（需后台审核）" else "✅ 注册成功！")
 # ===================== 登录流程 =====================
 def login_page():
     # 强制读取用户文件
