@@ -445,7 +445,7 @@ def register_page():
         extra_fields["org_code"] = st.text_input("机构码")
 
     # ========= 提交注册（最关键修复在这里！）=========
-    if st.button("完成注册"):
+        if st.button("完成注册"):
         if not phone:
             st.error("请输入手机号！")
         elif code != "123456":
@@ -473,14 +473,14 @@ def register_page():
                     "pwd": pwd,
                     "nickname": nickname,
                     "role": user_role,
-                    "audit_status": "已通过",
-                    "is_authorized": True
+                    "audit_status": "待审核",
+                    "is_authorized": False
                 }
 
                 with open("users.json", "w", encoding="utf-8") as f:
                     json.dump(users, f, ensure_ascii=False, indent=4)
 
-                st.success("注册成功！请登录！")
+                st.success("注册成功！等待管理员审核！")
                 st.session_state.page = "login"
                 st.rerun()
 
