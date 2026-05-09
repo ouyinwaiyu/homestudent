@@ -448,63 +448,39 @@ def register_page():
     if st.button("完成注册"):
         if not phone:
             st.error("请输入手机号！")
-        elif not code:
-            st.error("请输入验证码！")
+        elif code != "123456":
+            st.error("验证码错误！")
         elif not nickname:
             st.error("请输入昵称！")
         elif not pwd:
-            st.error("请设置密码！")
-        elif not pwd_confirm:
-            st.error("请确认密码！")
+            st.error("请输入密码！")
         elif pwd != pwd_confirm:
             st.error("两次密码不一致！")
-        elif code != "123456":
-            st.error("验证码错误！")
         elif user_role == "机构管理员/负责人" and not extra_fields.get("org_name"):
             st.error("请填写机构名称！")
-        elif user_role == "机构管理员/负责人" and not extra_fields.get("contact"):
-            st.error("请填写联系人！")
         else:
-            users = load_users()
+            try:
+                with open("users.json", "r", encoding="utf-8") as f:
+                    users = json.load(f)
+            except:
+                users = {}
+
             if phone in users:
                 st.error("该手机号已注册！")
             else:
-                new_user = {
+                users[phone] = {
                     "phone": phone,
                     "pwd": pwd,
                     "nickname": nickname,
-                    "role": "教师" if "老师" in user_role else "学生" if "学生" in user_role else "机构管理员",
-                    "user_type": user_type,
-                    "class_name": extra_fields.get("grade", "默认班级"),
-                    "is_authorized": False,
-                    "audit_status": "approved" if "个人" in user_type else "pending",
-                    "age_range": age_range,
-                    "guardian_agree": guardian_agree,
-                    "agreement_agree": agree_all,
-                    "wrong_questions": [],
-                    "pending_reviews": [],
-                    "finished_homeworks": [],
-                    "token_usage": 0
+                    "role": user_role,
+                    "audit_status": "已通过",
+                    "is_authorized": True
                 }
-                new_user.update(extra_fields)
-                users[phone] = new_user
-                save_users(users)
-                print("✅ 已保存用户：", users)
-                if "机构" in user_type:
-                    admin_config = load_admin_config()
-                    admin_config["audit_list"].append({
-                        "user_id": phone,
-                        "nickname": nickname,
-                        "user_type": user_type,
-                        "org_name": extra_fields.get("org_name", ""),
-                        "apply_time": datetime.now().isoformat(),
-                        "status": "pending"
-                    })
-                    save_admin_config(admin_config)
-                    st.success("注册成功！等待管理员审核")
-                else:
-                    st.success("注册成功！")
-            
+
+                with open("users.json", "w", encoding="utf-8") as f:
+                    json.dump(users, f, ensure_ascii=False, indent=4)
+
+                st.success("注册成功！请登录！")
                 st.session_state.page = "login"
                 st.rerun()
 
